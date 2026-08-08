@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shiva AI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+    body { background: #0b0f19; color: #f3f4f6; display: flex; height: 100vh; overflow: hidden; }
+
+    /* Glassmorphism Responsive Sidebar */
+    .sidebar { width: 280px; background: #111827; border-right: 1px solid #1f2937; display: flex; flex-direction: column; transition: all 0.3s ease; z-index: 50; }
+    .sidebar-header { padding: 15px; border-bottom: 1px solid #1f2937; display: flex; justify-content: space-between; align-items: center; }
+    .new-chat-btn { margin: 12px; padding: 10px; background: #4f46e5; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+    .history-list { flex: 1; overflow-y: auto; padding: 10px; }
+    .history-item { padding: 10px; background: #1f2937; border-radius: 6px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; cursor: pointer; }
+
+    /* Main Chat Layout */
+    .main-chat { flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; }
+    .top-bar { height: 60px; background: #111827; border-bottom: 1px solid #1f2937; display: flex; align-items: center; justify-content: space-between; padding: 0 15px; }
+    .brand { font-size: 1.2rem; font-weight: bold; color: #818cf8; }
+
+    .chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { max-width: 85%; padding: 12px 16px; border-radius: 12px; font-size: 0.95rem; line-height: 1.5; word-wrap: break-word; }
+    .user { align-self: flex-end; background: #4f46e5; color: white; border-bottom-right-radius: 2px; }
+    .ai { align-self: flex-start; background: #1f2937; border: 1px solid #374151; border-bottom-left-radius: 2px; }
+
+    /* Inputs */
+    .input-box { padding: 12px; background: #111827; border-top: 1px solid #1f2937; display: flex; gap: 8px; align-items: center; }
+    .input-box input[type="text"] { flex: 1; padding: 12px; background: #1f2937; border: 1px solid #374151; color: white; border-radius: 8px; outline: none; }
+    .icon-btn { background: #1f2937; border: 1px solid #374151; color: white; padding: 10px; border-radius: 8px; cursor: pointer; }
+
+    /* Admin Modal */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; padding: 15px; }
+    .modal-content { background: #111827; padding: 20px; border-radius: 12px; width: 100%; max-width: 450px; border: 1px solid #374151; }
+    .admin-input { width: 100%; padding: 10px; margin: 8px 0; background: #1f2937; border: 1px solid #374151; color: white; border-radius: 6px; }
+    .chat-logs { max-height: 250px; overflow-y: auto; background: #0b0f19; padding: 10px; font-size: 0.8rem; margin-top: 10px; border-radius: 6px; }
+
+    @media (max-width: 768px) {
+      .sidebar { position: absolute; left: -280px; height: 100%; }
+      .sidebar.active { left: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar (History / 3 Dots) -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h3>Shiva AI</h3>
+      <button class="icon-btn" onclick="toggleSidebar()">✕</button>
+    </div>
+    <button class="new-chat-btn" onclick="newChat()">+ New Chat</button>
+    <div class="history-list" id="historyList">
+      <div class="history-item">
+        <span>Current Active Chat</span>
+        <span>⋮</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Interface -->
+  <main class="main-chat">
+    <div class="top-bar">
+      <button class="icon-btn" onclick="toggleSidebar()">☰</button>
+      <div class="brand">Shiva AI</div>
+      <button class="icon-btn" onclick="openAdminModal()">Admin Panel</button>
+    </div>
+
+    <div class="chat-box" id="chatBox">
+      <div class="msg ai">Namaste! Main **Shiva AI** hoon. Aapki kya sahayata kar sakta hoon?</div>
+    </div>
+
+    <div class="input-box">
+      <input type="file" id="fileInput" hidden onchange="fileSelected()">
+      <button class="icon-btn" title="Attach File/Image" onclick="document.getElementById('fileInput').click()">📎</button>
+      <button class="icon-btn" id="micBtn" title="Voice Input" onclick="startVoice()">🎙️</button>
+      <input type="text" id="userInput" placeholder="Ask Shiva AI..." onkeypress="if(event.key==='Enter') sendMsg()">
+      <button class="icon-btn" style="background:#4f46e5;" onclick="sendMsg()">Send</button>
+    </div>
+  </main>
+
+  <!-- Admin Panel Modal -->
+  <div class="modal" id="adminModal">
+    <div class="modal-content">
+      <h3 style="margin-bottom:10px;">Ishan Admin Panel</h3>
+      <input type="text" id="adminNum" class="admin-input" placeholder="Number (9801306038)">
+      <input type="password" id="adminPass" class="admin-input" placeholder="Password (IshanAdmin@234)">
+      <button class="new-chat-btn" style="width:100%; margin: 8px 0;" onclick="loginAdmin()">Fetch User Chats</button>
+      
+      <div class="chat-logs" id="adminLogArea">Logs will appear here after login...</div>
+      
+      <button class="icon-btn" style="width:100%; margin-top:10px; background:#e11d48;" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Deploy hone ke baad yahan apna Render backend URL paste kar dena:
+    const BACKEND_URL = "http://localhost:3000"; 
+    
+    let userId = localStorage.getItem('shiva_user_id') || 'user_' + Math.random().toString(36).substring(7);
+    localStorage.setItem('shiva_user_id', userId);
+
+    let selectedBase64 = null;
+    let selectedFileName = null;
+
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
+    function openAdminModal() { document.getElementById('adminModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('adminModal').style.display = 'none'; }
+
+    async function sendMsg() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text && !selectedBase64) return;
+
+      const chatBox = document.getElementById('chatBox');
+      
+      // User Message UI
+      let displayMsg = text;
+      if (selectedFileName) displayMsg += `<br><small><i>[File: ${selectedFileName}]</i></small>`;
+      
+      chatBox.innerHTML += `<div class="msg user">${displayMsg}</div>`;
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: userId,
+            message: text,
+            imageBase64: selectedBase64,
+            fileName: selectedFileName
+          })
+        });
+        const data = await res.json();
+        chatBox.innerHTML += `<div class="msg ai">${data.reply}</div>`;
+      } catch (err) {
+        chatBox.innerHTML += `<div class="msg ai">Connection Error! Backend server se connect nahi ho raha hai.</div>`;
+      }
+
+      selectedBase64 = null;
+      selectedFileName = null;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function fileSelected() {
+      const file = document.getElementById('fileInput').files[0];
+      if (file) {
+        selectedFileName = file.name;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          selectedBase64 = e.target.result.split(',')[1];
+          alert("Attached: " + file.name);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function startVoice() {
+      if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const rec = new SpeechRecognition();
+        rec.lang = 'hi-IN';
+        rec.onresult = (e) => {
+          document.getElementById('userInput').value = e.results[0][0].transcript;
+        };
+        rec.start();
+      } else {
+        alert("Aapka browser Speech Input support nahi karta.");
+      }
+    }
+
+    async function loginAdmin() {
+      const num = document.getElementById('adminNum').value;
+      const pass = document.getElementById('adminPass').value;
+      const logArea = document.getElementById('adminLogArea');
+
+      try {
+        const res = await fetch(`${BACKEND_URL}/api/admin/get-all-chats`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ number: num, password: pass })
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          logArea.innerHTML = "<b>All Live Active User Chats:</b><br><br>" + JSON.stringify(data.chats, null, 2);
+        } else {
+          alert(data.message);
+        }
+      } catch(err) {
+        alert("Backend server tak request nahi pahunchi.");
+      }
+    }
+
+    function newChat() {
+      document.getElementById('chatBox').innerHTML = '<div class="msg ai">Naya chat topic shuru ho gaya hai!</div>';
+    }
+  </script>
+</body>
+</html>
